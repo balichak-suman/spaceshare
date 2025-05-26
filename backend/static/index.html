@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>File Upload + Blockchain Log</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.3/dist/web3.min.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f8fafc;
+      overflow: hidden;
+    }
+    .centered {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      z-index: 1;
+      transform: none;
+      /* Removed padding-right for true centering */
+      /* Add image background for welcome page */
+      background: url('static/img.png') center center/cover no-repeat;
+    }
+    .centered::before {
+      content: none;
+    }
+    .welcome-title {
+      font-size: 6rem;
+      font-weight: bold;
+      color: #4f46e5;
+      letter-spacing: 2px;
+      /* Only fade in transition */
+      opacity: 0;
+      text-shadow: none;
+      font-family: 'Menlo', 'Consolas', 'Liberation Mono', monospace;
+      position: relative;
+      display: inline-block;
+      left: 2vw; /* Slightly more to the left */
+      overflow: hidden;
+      white-space: pre;
+      border-right: none;
+      transition: opacity 0.5s;
+    }
+    .center-char {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      color: #4f46e5;
+      background: transparent;
+      pointer-events: none;
+    }
+    .welcome-title .side-text {
+      opacity: 1;
+      position: relative;
+      z-index: 1;
+    }
+    @keyframes fadeInScale {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    .enter-btn {
+      margin-top: 2rem;
+      padding: 0.8rem 2.2rem;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #6366f1 0%, #818cf8 100%);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(60,72,88,0.10);
+      transition: background 0.2s, transform 0.2s;
+      text-shadow: none;
+    }
+    .enter-btn:hover {
+      background: linear-gradient(90deg, #3730a3 0%, #6366f1 100%);
+      color: #fff;
+      box-shadow: 0 4px 32px rgba(60,72,88,0.18);
+      transform: scale(1.05);
+      text-shadow: none;
+    }
+    .video-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      object-fit: cover;
+      z-index: 0;
+      filter: none; /* No blur, no dim */
+    }
+    .login-card {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: transparent; /* Fully transparent */
+      border-radius: 18px;
+      box-shadow: 0 6px 32px rgba(60,72,88,0.18);
+      padding: 2.5rem 2rem 2rem 2rem;
+      max-width: 350px;
+      width: 100%;
+      z-index: 2;
+      text-align: center;
+      animation: fadeInScale 1s;
+    }
+    .login-card h2 {
+      color: #4f46e5;
+      margin-bottom: 1.2rem;
+    }
+    .login-card input[type="text"], .login-card input[type="password"], .login-card input[type="email"] {
+      width: 90%;
+      padding: 0.7rem;
+      margin: 0.7rem 0;
+      border: 1px solid #c7d2fe;
+      border-radius: 7px;
+      font-size: 1rem;
+      background: #f1f5f9;
+    }
+    .login-card button {
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: background 0.2s;
+    }
+    .login-card button:hover {
+      background: #3730a3;
+    }
+    .hidden { display: none !important; }
+    /* Wallet/Upload UI styles */
+    .card {
+      background: transparent; /* Fully transparent */
+      border-radius: 18px;
+      box-shadow: 0 6px 32px rgba(60,72,88,0.18);
+      padding: 2.5rem 2rem 2rem 2rem;
+      max-width: 350px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+      top: 80px; /* was 50px, now a bit further down */
+    }
+    .connect-topright {
+      position: absolute;
+      top: 1.5rem;
+      right: 2rem;
+      z-index: 3;
+      background: linear-gradient(90deg, #ff6a00 0%, #ff0000 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 16px rgba(255, 106, 0, 0.18);
+      display: block;
+    }
+    .connect-topright:hover {
+      background: linear-gradient(90deg, #ff0000 0%, #ff6a00 100%);
+      box-shadow: 0 4px 32px rgba(255, 106, 0, 0.28);
+    }
+    .metamask-icon {
+      position: absolute;
+      top: 1.5rem;
+      right: 6rem; /* Adjusted position to fix overlap */
+      z-index: 3;
+      width: 38px;
+      height: 38px;
+      background: none;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+    }
+    .metamask-icon img {
+      width: 32px;   /* 96px / 3 = 32px */
+      height: 32px;
+      display: block;
+    }
+    .connect-address {
+      position: absolute;
+      top: 4.2rem;
+      right: 2.2rem;
+      color: #155e75;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: none;
+      border-radius: 6px;
+      padding: 0.1rem 0.3rem;
+      word-break: break-all;
+      box-shadow: none;
+      letter-spacing: 0.5px;
+      opacity: 0.92;
+      z-index: 4;
+      pointer-events: none;
+      min-width: 120px;
+      text-align: right;
+      display: none;
+    }
+    .connected-label {
+      position: absolute;
+      top: 4.2rem;
+      right: 2.2rem;
+      color: #059669;
+      font-size: 0.65rem;
+      font-weight: 600;
+      background: none;
+      border-radius: 6px;
+      padding: 0.05rem 0.2rem;
+      opacity: 0.85;
+      z-index: 4;
+      pointer-events: none;
+      min-width: 60px;
+      text-align: right;
+      display: none;
+    }
+    .card button {
+      background: linear-gradient(90deg, #ff6a00 0%, #ff0000 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 16px rgba(255, 106, 0, 0.18);
+    }
+    .card button:hover {
+      background: linear-gradient(90deg, #ff0000 0%, #ff6a00 100%);
+      box-shadow: 0 4px 32px rgba(255, 106, 0, 0.28);
+    }
+    input[type="file"] {
+      margin: 1rem 0 0.5rem 0;
+      border: 2px solid #ff6a00;
+      border-radius: 6px;
+      padding: 0.5rem;
+      background: linear-gradient(90deg, #fff0e0 0%, #ffe5cc 100%);
+      color: #b45309;
+      font-weight: 500;
+      width: 100%;
+      cursor: pointer;
+      transition: border 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px rgba(255, 106, 0, 0.08);
+    }
+    input[type="file"]:hover, input[type="file"]:focus {
+      border: 2px solid #ff0000;
+      box-shadow: 0 4px 16px rgba(255, 106, 0, 0.18);
+      background: linear-gradient(90deg, #ffe5cc 0%, #fff0e0 100%);
+    }
+    #userAddress {
+      color: #64748b;
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+      word-break: break-all;
+    }
+    #logo-container { display: none; }
+    @media (max-width: 500px) {
+      .card, .login-card { padding: 1.2rem 0.5rem; }
+    }
+    #filesListContainer {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      width: 340px;
+    }
+
+    .files-list-card {
+      margin: 0;
+      text-align: left;
+      align-items: flex-start;
+      background: transparent;
+      box-shadow: none;
+      padding: 0;
+    }
+
+    .list-files-btn {
+      background: linear-gradient(90deg, #ff6a00 0%, #ff0000 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.4rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 1rem;
+      width: auto;
+      text-align: left;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 16px rgba(255, 106, 0, 0.18);
+      display: inline-block;
+    }
+    .list-files-btn:hover {
+      background: linear-gradient(90deg, #ff0000 0%, #ff6a00 100%);
+      box-shadow: 0 4px 32px rgba(255, 106, 0, 0.28);
+    }
+
+    /* Update scrollable container for the file list */
+    #filesList {
+      max-height: 300px; /* Adjust as needed */
+      overflow-y: auto;
+      padding: 0.5rem;
+      border: none; /* Remove the border */
+      border-radius: 8px;
+      background: transparent; /* Fully transparent background */
+    }
+
+    /* Hide scrollbar for all browsers */
+    #filesList::-webkit-scrollbar {
+      display: none; /* Chrome, Safari */
+    }
+    #filesList {
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
+    }
+  </style>
+</head>
+<body>
+  <!-- Logo Top Left (only visible on welcome page) -->
+  <img id="mlritLogo" src="static/mlrit.png" alt="MLRIT Logo" style="position:fixed;top:32px;left:32px;width:180px;height:auto;z-index:10;">
+
+  <!-- Welcome Page -->
+  <div id="welcome" class="centered">
+    <div id="welcomeText" class="welcome-title">Welcome</div>
+    <!-- Removed the Enter button -->
+  </div>
+
+  <!-- Login Page -->
+  <div id="login" class="hidden">
+    <video id="loginVideo" class="video-bg" autoplay muted>
+      <source src="static/apple.mp4" type="video/mp4">
+      <!-- Local video file in static folder -->
+    </video>
+    <div class="login-card">
+      <h2>Login</h2>
+      <input type="text" id="username" placeholder="Username" autocomplete="off" />
+      <input type="password" id="password" placeholder="Password" autocomplete="off" />
+      <!-- <input type="email" id="loginEmail" placeholder="Email" autocomplete="off" /> -->
+      <div style="display:flex;gap:0.5rem;">
+        <input type="text" id="loginOTP" placeholder="OTP" autocomplete="off" style="flex:1;" />
+        <button type="button" style="background:#64748b;color:#fff;padding:0.7rem 1rem;" onclick="sendLoginOTP()">Send OTP</button>
+      </div>
+      <button onclick="login()">Login</button>
+      <button style="margin-top:1rem;background:#64748b;color:#fff;" onclick="showSignUp()">Sign Up</button>
+      <div id="loginError" style="color:#e11d48;margin-top:1rem;display:none;">Invalid credentials</div>
+    </div>
+  </div>
+
+  <!-- Sign Up Page -->
+  <div id="signup" class="hidden">
+    <video id="signupVideo" class="video-bg" autoplay muted>
+      <source src="static/apple.mp4" type="video/mp4">
+    </video>
+    <div class="login-card">
+      <h2>Sign Up</h2>
+      <input type="text" id="signupUsername" placeholder="Username" autocomplete="off" />
+      <input type="password" id="signupPassword" placeholder="Password" autocomplete="off" />
+      <input type="email" id="signupEmail" placeholder="Email" autocomplete="off" />
+      <div style="display:flex;gap:0.5rem;">
+        <input type="text" id="signupOTP" placeholder="OTP" autocomplete="off" style="flex:1;" />
+        <button type="button" style="background:#64748b;color:#fff;padding:0.7rem 1rem;" onclick="sendOTP()">Send OTP</button>
+      </div>
+      <button onclick="signUp()">Create Account</button>
+      <button style="margin-top:1rem;background:#64748b;color:#fff;" onclick="showLoginFromSignUp()">Back to Login</button>
+      <div id="signupError" style="color:#e11d48;margin-top:1rem;display:none;">Sign up failed</div>
+      <div id="signupSuccess" style="color:#059669;margin-top:1rem;display:none;">Sign up successful! Please login.</div>
+    </div>
+  </div>
+
+  <!-- Wallet/Upload UI -->
+  <div id="walletUpload" class="hidden" style="position:relative;">
+    <video id="walletVideo" class="video-bg" autoplay muted loop>
+      <source src="static/final.mp4" type="video/mp4">
+      <!-- Use your new video file for the final page -->
+    </video>
+    <div style="position: absolute; top: 1.5rem; right: 2rem; display: flex; gap: 0.5rem; z-index: 3;">
+      <button id="logoutBtn" style="background: #e11d48; padding: 0.35rem 0.75rem; border-radius: 4px; font-size: 0.5rem; font-weight: 600; cursor: pointer;" onclick="logout()">Logout</button>
+      <button id="connectBtn" style="background: linear-gradient(90deg, #ff6a00 0%, #ff0000 100%); color: #fff; border: none; border-radius: 8px; padding: 0.35rem 0.75rem; font-size: 0.6rem; font-weight: 600; cursor: pointer;" onclick="connectMetaMask()">Connect MetaMask</button>
+    </div>
+    <button id="metamaskIcon" class="metamask-icon" style="display:none;" tabindex="-1">
+      <img src="static/metamask-fox.png" alt="MetaMask" />
+    </button>
+    <div id="userAddress" class="connect-address"></div>
+    <div id="connectedLabel" class="connected-label">connected</div>
+    <!-- List Files UI: moves to top left -->
+    <div id="filesListContainer" style="position: fixed; top: 20px; left: 20px; z-index: 10; width: 340px;">
+      <div class="card files-list-card" style="margin: 0; text-align: left; align-items: flex-start; background: transparent; box-shadow: none; padding: 0;">
+        <button onclick="listFiles()" class="list-files-btn">List My Files</button>
+        <div id="filesList"></div>
+      </div>
+    </div>
+    <!-- Upload Card: stays centered -->
+    <div class="card" style="position:relative; z-index:2; margin: 0 auto;">
+      <input type="file" id="fileInput" />
+      <button onclick="uploadFile()">Upload</button>
+    </div>
+  </div>
+
+  <script>
+    // Only clear login state if you want to force logout on reload
+    // Comment out or remove these lines if you want to persist login
+    // localStorage.removeItem('isLoggedIn');
+    // localStorage.removeItem('lastUsername');
+    // localStorage.setItem('lastPage', 'welcome');
+
+    // Add these variables after localStorage setup
+    let web3;
+    let userAccount;
+
+    // Use the full ABI from your FileLog.json artifact
+    const FILE_LOG_CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+    const FILE_LOG_ABI = [
+      {
+        "anonymous": false,
+        "inputs": [
+          { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
+          { "indexed": false, "internalType": "string", "name": "filename", "type": "string" },
+          { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+        ],
+        "name": "FileUploaded",
+        "type": "event"
+      },
+      {
+        "inputs": [
+          { "internalType": "uint256", "name": "", "type": "uint256" }
+        ],
+        "name": "files",
+        "outputs": [
+          { "internalType": "address", "name": "user", "type": "address" },
+          { "internalType": "string", "name": "filename", "type": "string" },
+          { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "getFiles",
+        "outputs": [
+          {
+            "components": [
+              { "internalType": "address", "name": "user", "type": "address" },
+              { "internalType": "string", "name": "filename", "type": "string" },
+              { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+            ],
+            "internalType": "struct FileLog.File[]",
+            "name": "",
+            "type": "tuple[]"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "string", "name": "_filename", "type": "string" }
+        ],
+        "name": "logFile",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ];
+
+    function showTemporaryMessage(message, duration, backgroundColor = '#059669') {
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = message;
+      messageDiv.style.position = 'fixed';
+      messageDiv.style.top = '20px';
+      messageDiv.style.left = '50%';
+      messageDiv.style.transform = 'translateX(-50%)';
+      messageDiv.style.background = backgroundColor;
+      messageDiv.style.color = '#fff';
+      messageDiv.style.padding = '10px 20px';
+      messageDiv.style.borderRadius = '8px';
+      messageDiv.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
+      messageDiv.style.zIndex = '1000';
+      document.body.appendChild(messageDiv);
+
+      setTimeout(() => {
+        document.body.removeChild(messageDiv);
+      }, duration);
+    }
+
+    // Simplified version - remove contract requirements
+    async function connectMetaMask() {
+      if (typeof window.ethereum === "undefined") {
+        showTemporaryMessage("Please install MetaMask!", 3000, '#e11d48');
+        return;
+      }
+      try {
+        // Just connect to MetaMask
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const web3 = new Web3(window.ethereum);
+        const accounts = await web3.eth.getAccounts();
+        userAccount = accounts[0];
+        
+        // Update UI
+        document.getElementById('connectBtn').style.display = 'none';
+        document.getElementById('metamaskIcon').style.display = 'block';
+        document.getElementById('userAddress').textContent = userAccount.slice(0, 6) + "..." + userAccount.slice(-4);
+        document.getElementById('userAddress').style.display = 'block';
+        document.getElementById('connectedLabel').style.display = 'none';
+        setTimeout(() => {
+          document.getElementById('userAddress').style.display = 'none';
+          document.getElementById('connectedLabel').style.display = 'block';
+        }, 2000);
+      } catch (err) {
+        showTemporaryMessage("Failed to connect to MetaMask: " + err.message, 3000, '#e11d48');
+      }
+    }
+
+    // Update uploadFile to work with MetaMask transaction validation
+    async function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files.length) {
+        showTemporaryMessage('Please select a file first!', 3000, '#e11d48');
+        return;
+      }
+      const file = fileInput.files[0];
+      const username = localStorage.getItem('lastUsername');
+      if (!username) {
+        showTemporaryMessage('Username not found. Please log in again.', 3000, '#e11d48');
+        return;
+      }
+
+      // 1. Trigger MetaMask transaction to log file on blockchain
+      if (typeof window.ethereum === "undefined") {
+        showTemporaryMessage("Please install MetaMask!", 3000, '#e11d48');
+        return;
+      }
+      let txHash = null;
+      try {
+        const web3 = new Web3(window.ethereum);
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const from = accounts[0];
+        const contract = new web3.eth.Contract(FILE_LOG_ABI, FILE_LOG_CONTRACT_ADDRESS);
+
+        // Call logFile on the contract
+        const receipt = await contract.methods.logFile(file.name).send({ from });
+        txHash = receipt.transactionHash;
+        showTemporaryMessage("Blockchain log successful! Tx: " + txHash, 3000);
+
+        // Add a delay before showing the file upload success message
+        setTimeout(async () => {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("username", username);
+
+          try {
+            const response = await fetch("/upload", {
+              method: "POST",
+              body: formData
+            });
+            const result = await response.json();
+            if (response.ok) {
+              showTemporaryMessage("File uploaded successfully to MongoDB!", 3000);
+
+              // Check if the file list is already visible
+              const filesDiv = document.getElementById('filesList');
+              const listFilesButton = document.querySelector('.list-files-btn');
+              if (listFilesButton) {
+                if (filesDiv.style.display === 'block') {
+                  listFilesButton.click(); // Click once to hide
+                  setTimeout(() => listFilesButton.click(), 300); // Click again to refresh
+                } else {
+                  listFilesButton.click(); // Click once to make it visible
+                }
+              }
+            } else {
+              showTemporaryMessage("Upload failed: " + (result.error || "Unknown error"), 3000, '#e11d48');
+            }
+          } catch (err) {
+            showTemporaryMessage("Upload failed: " + err.message, 3000, '#e11d48');
+          }
+        }, 3500); // Delay of 3.5 seconds
+      } catch (err) {
+        showTemporaryMessage('MetaMask transaction rejected or failed: ' + err.message, 3000, '#e11d48');
+        // Do NOT upload file if transaction fails
+        return;
+      }
+      fileInput.value = ''; // Clear the file input
+    }
+
+    async function listFiles() {
+      const filesDiv = document.getElementById('filesList');
+      // Toggle visibility
+      if (filesDiv.style.display === 'block') {
+        filesDiv.style.display = 'none';
+        return;
+      }
+
+      const username = localStorage.getItem('lastUsername');
+      if (!username) {
+        showTemporaryMessage('Username not found. Please log in again.', 3000, '#e11d48');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/list_files?username=${encodeURIComponent(username)}`);
+        const data = await res.json();
+        filesDiv.innerHTML = ''; // Clear previous content
+        if (data.files && data.files.length > 0) {
+          const ul = document.createElement('ul');
+          ul.style.listStyle = "none";
+          ul.style.padding = "0";
+
+          // Sort files by uploadDate in descending order
+          data.files.sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
+
+          data.files.forEach(file => {
+            // Shorten filename by half
+            let name = file.filename;
+            if (name.length > 8) {
+              const half = Math.ceil(name.length / 2);
+              name = name.slice(0, half) + '...';
+            }
+            // Format upload date
+            let uploadDate = '';
+            if (file.uploadDate) {
+              const dateObj = new Date(file.uploadDate);
+              uploadDate = dateObj.toLocaleString();
+            }
+            const li = document.createElement('li');
+            li.style.marginBottom = "0.5rem";
+            li.style.display = "flex";
+            li.style.flexDirection = "column";
+            li.style.alignItems = "flex-start";
+            li.innerHTML = `
+              <span style="color:#4f46e5;font-weight:500;flex:1;">${name}</span>
+              <span style="color:#64748b;font-size:0.85em;margin-bottom:0.2rem;">${uploadDate ? 'Uploaded: ' + uploadDate : ''}</span>
+              <div style="display: flex; gap: 0.5rem;">
+                <button style="margin-left:0;background:#059669;color:#fff;padding:0.3rem 0.8rem;border-radius:6px;border:none;cursor:pointer;flex-shrink:0;" onclick="downloadFile('${file._id}', '${file.filename}')">Download</button>
+                <button style="margin-left:0;background:#e11d48;color:#fff;padding:0.3rem 0.8rem;border-radius:6px;border:none;cursor:pointer;flex-shrink:0;" onclick="deleteFile('${file._id}', '${file.filename}')">Delete</button>
+              </div>
+            `;
+            ul.appendChild(li);
+          });
+          filesDiv.appendChild(ul);
+        } else {
+          filesDiv.innerHTML = '<div style="color:#64748b;">No files found.</div>';
+        }
+        filesDiv.style.display = 'block'; // Show the file list
+      } catch (e) {
+        filesDiv.innerHTML = '<div style="color:#e11d48;">Failed to fetch files.</div>';
+        filesDiv.style.display = 'block'; // Show error message
+      }
+    }
+
+    async function deleteFile(fileId, filename) {
+      const username = localStorage.getItem('lastUsername');
+      if (!username) {
+        showTemporaryMessage('Username not found. Please log in again.', 3000, '#e11d48');
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/delete_file/${username}/${fileId}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showTemporaryMessage(data.message || 'File deleted successfully.', 3000);
+          // Simulate clicking the "List My Files" button twice
+          const listFilesButton = document.querySelector('.list-files-btn');
+          if (listFilesButton) {
+            listFilesButton.click();
+            setTimeout(() => listFilesButton.click(), 300); // Delay for UI update
+          }
+        } else {
+          showTemporaryMessage(data.error || 'Failed to delete file.', 3000, '#e11d48');
+        }
+      } catch (e) {
+        showTemporaryMessage('Error deleting file: ' + e.message, 3000, '#e11d48');
+      }
+    }
+
+    function showTemporaryMessage(message, duration = 3000, backgroundColor = '#059669') {
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = message;
+      messageDiv.style.position = 'fixed';
+      messageDiv.style.top = '20px';
+      messageDiv.style.left = '50%';
+      messageDiv.style.transform = 'translateX(-50%)';
+      messageDiv.style.background = backgroundColor;
+      messageDiv.style.color = '#fff';
+      messageDiv.style.padding = '10px 20px';
+      messageDiv.style.borderRadius = '8px';
+      messageDiv.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
+      messageDiv.style.zIndex = '1000';
+      document.body.appendChild(messageDiv);
+
+      setTimeout(() => {
+        document.body.removeChild(messageDiv);
+      }, duration);
+    }
+
+    function downloadFile(fileId, filename) {
+      const username = localStorage.getItem('lastUsername');
+      if (!username) {
+        showTemporaryMessage('Username not found. Please log in again.', 3000, '#e11d48');
+        return;
+      }
+      // Download from per-user endpoint
+      window.open(`/download/${username}/${fileId}`, '_blank');
+    }
+
+    // Show/hide logo based on visible page
+    function updateLogoVisibility() {
+      const logo = document.getElementById('mlritLogo');
+      const welcome = document.getElementById('welcome');
+      if (!logo || !welcome) return;
+      if (!welcome.classList.contains('hidden')) {
+        logo.style.display = 'block';
+      } else {
+        logo.style.display = 'none';
+      }
+    }
+
+    // Patch all page transitions to update logo visibility
+    function showLogin() {
+      document.getElementById('welcome').classList.add('hidden');
+      document.getElementById('login').classList.remove('hidden');
+      localStorage.setItem('lastPage', 'login');
+      updateLogoVisibility();
+      const video = document.getElementById('loginVideo');
+      if (video) {
+        video.currentTime = 0; // Start at 0 seconds
+        video.play();
+        video.loop = false;
+        video.playbackRate = 1.0;
+
+        video.ontimeupdate = function () {
+          if (video.currentTime >= 3) {
+            video.currentTime = 1.7; // Set to 1.5 seconds for looping
+            video.loop = true; // Enable looping
+            video.play();
+          }
+        };
+
+        video.onended = null; // Ensure no additional behavior on video end
+      }
+      document.querySelector('.login-card').style.display = "block";
+    }
+
+    function playVideoFrom4sThenShowWallet() {
+      const video = document.getElementById('loginVideo');
+      document.querySelector('.login-card').style.display = "none";
+      if (video) {
+        video.ontimeupdate = null;
+        video.currentTime = 4;
+        video.loop = false;
+        video.playbackRate = 3.0;
+        video.play();
+        // Wait until 7 seconds, then show wallet page
+        const handler = function() {
+          if (video.currentTime >= 7) {
+            video.pause();
+            video.onended = null;
+            video.ontimeupdate = null;
+            showWalletUpload();
+          }
+        };
+        video.ontimeupdate = handler;
+        video.onended = null;
+      } else {
+        showWalletUpload();
+      }
+    }
+
+    function showWalletUpload() {
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('signup').classList.add('hidden');
+      document.getElementById('walletUpload').classList.remove('hidden');
+      localStorage.setItem('lastPage', 'walletUpload');
+      localStorage.setItem('isLoggedIn', 'true');
+      updateLogoVisibility();
+      const video = document.getElementById('loginVideo');
+      if (video) {
+        video.ontimeupdate = null;
+        video.onended = null;
+        video.pause();
+      }
+      const walletVideo = document.getElementById('walletVideo');
+      if (walletVideo) {
+        walletVideo.playbackRate = 1.0;
+      }
+    }
+
+    async function sendLoginOTP() {
+      const username = document.getElementById('username').value.trim();
+      if (!username) {
+        showTemporaryMessage('Please enter your username first.', 3000, '#e11d48');
+        return;
+      }
+      try {
+        const res = await fetch('/send_otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, mode: "login" })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showTemporaryMessage('OTP sent to your registered email (check console in demo).', 1000);
+        } else {
+          showTemporaryMessage(data.error || 'Failed to send OTP', 3000, '#e11d48');
+        }
+      } catch (e) {
+        showTemporaryMessage('Network error sending OTP', 3000, '#e11d48');
+      }
+    }
+
+  async function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const otp = document.getElementById('loginOTP').value.trim();
+  if (!username || !password || !otp) {
+    document.getElementById('loginError').innerText = "All fields and OTP are required";
+    document.getElementById('loginError').style.display = "block";
+    return;
+  }
+  try {
+    const res = await fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, otp })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('loginError').style.display = "none";
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('lastUsername', username);
+      playVideoFrom4sThenShowWallet();
+    } else {
+      document.getElementById('loginError').innerText = data.error || "Invalid credentials";
+      document.getElementById('loginError').style.display = "block";
+    }
+  } catch (e) {
+    document.getElementById('loginError').innerText = "Network error. Please try again.";
+    document.getElementById('loginError').style.display = "block";
+  }
+}
+
+    function logout() {
+      // Clear user session data
+      localStorage.clear();
+
+      // Redirect to the welcome page
+      document.getElementById('walletUpload').classList.add('hidden');
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('signup').classList.add('hidden');
+      document.getElementById('welcome').classList.remove('hidden');
+      updateLogoVisibility();
+    }
+
+    // Initialization
+    window.addEventListener('load', () => {
+      // Always hide all sections first
+      document.getElementById('welcome').classList.add('hidden');
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('signup').classList.add('hidden');
+      document.getElementById('walletUpload').classList.add('hidden');
+
+      // Always show welcome page on load
+      document.getElementById('welcome').classList.remove('hidden');
+      updateLogoVisibility();
+    });
+
+    function showSignUp() {
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('signup').classList.remove('hidden');
+  localStorage.setItem('lastPage', 'signup');
+  const video = document.getElementById('signupVideo');
+  if (video) {
+    video.currentTime = 0;
+    video.play();
+    video.loop = false;
+    video.playbackRate = 1.0;
+    video.ontimeupdate = function() {
+      if (video.currentTime >= 3) {
+        video.currentTime = 0;
+        video.play();
+      }
+    };
+    video.onended = null;
+  }
+  document.querySelector('.login-card').style.display = "block";
+}
+
+function showLoginFromSignUp() {
+  document.getElementById('signup').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+  localStorage.setItem('lastPage', 'login');
+  updateLogoVisibility();
+  const video = document.getElementById('loginVideo');
+  if (video) {
+    video.currentTime = 0;
+    video.play();
+    video.loop = false;
+    video.playbackRate = 1.0;
+    video.ontimeupdate = function() {
+      if (video.currentTime >= 3) {
+        video.currentTime = 0;
+        video.play();
+      }
+    };
+    video.onended = null;
+  }
+  document.querySelector('.login-card').style.display = "block";
+}
+
+async function sendOTP() {
+  const email = document.getElementById('signupEmail').value.trim();
+  if (!email) {
+    showTemporaryMessage('Please enter your email first.', 3000, '#e11d48');
+    return;
+  }
+  try {
+    const res = await fetch('/send_otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, mode: "signup" })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showTemporaryMessage('OTP sent to your email (check console in demo).', 3000);
+    } else {
+      showTemporaryMessage(data.error || 'Failed to send OTP', 3000, '#e11d48');
+    }
+  } catch (e) {
+    showTemporaryMessage('Network error sending OTP', 3000, '#e11d48');
+  }
+}
+
+async function signUp() {
+  const username = document.getElementById('signupUsername').value.trim();
+  const password = document.getElementById('signupPassword').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const otp = document.getElementById('signupOTP').value.trim();
+  if (!username || !password || !email || !otp) {
+    document.getElementById('signupError').innerText = "All fields and OTP are required";
+    document.getElementById('signupError').style.display = "block";
+    return;
+  }
+  try {
+    const res = await fetch('/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, email, otp })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('signupError').style.display = "none";
+      document.getElementById('signupSuccess').style.display = "block";
+      setTimeout(() => {
+        document.getElementById('signupSuccess').style.display = "none";
+        showLoginFromSignUp();
+      }, 1500);
+    } else {
+      document.getElementById('signupError').innerText = data.error || "Sign up failed";
+      document.getElementById('signupError').style.display = "block";
+    }
+  } catch (e) {
+    document.getElementById('signupError').innerText = "Network error. Please try again.";
+    document.getElementById('signupError').style.display = "block";
+  }
+}
+
+    // Animated welcome text loop
+    const welcomeTexts = ["Welcome", "  SpaceShare", "   Mini Project", "MLRIT  "];
+    let welcomeIndex = 0;
+    const welcomeTextDiv = document.getElementById('welcomeText');
+
+    function typeWriterEffect(text, i, callback) {
+      // Instantly show full text for fade in effect
+      welcomeTextDiv.innerHTML = text.replace(/ /g, '&nbsp;');
+      welcomeTextDiv.style.opacity = 1;
+      setTimeout(callback, 1200);
+    }
+
+    function animateWelcomeText() {
+      welcomeTextDiv.style.opacity = 0;
+      setTimeout(() => {
+        let text = welcomeTexts[welcomeIndex];
+        typeWriterEffect(text, 0, () => {
+          welcomeTextDiv.style.opacity = 0;
+          welcomeIndex = (welcomeIndex + 1) % welcomeTexts.length;
+          setTimeout(animateWelcomeText, 200);
+        });
+      }, 200);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      animateWelcomeText();
+      updateLogoVisibility();
+    });
+
+    // Attach click handler to the whole window when welcome page is visible
+    document.addEventListener('DOMContentLoaded', function() {
+      function welcomeClickHandler(e) {
+        // Only trigger if welcome page is visible and login is hidden
+        const welcomeDiv = document.getElementById('welcome');
+        const loginDiv = document.getElementById('login');
+        if (
+          welcomeDiv && loginDiv &&
+          !welcomeDiv.classList.contains('hidden') &&
+          loginDiv.classList.contains('hidden')
+        ) {
+          showLogin();
+        }
+      }
+      window.addEventListener('click', welcomeClickHandler);
+    });
+
+    // Additional code for contract deployment
+    const fs = require('fs');
+    async function main() {
+      const FileLog = await hre.ethers.getContractFactory("FileLog");
+      const fileLog = await FileLog.deploy();
+      await fileLog.waitForDeployment();
+      const address = await fileLog.getAddress();
+      console.log("Contract deployed to:", address);
+      fs.writeFileSync("deployedAddress.json", JSON.stringify({ address }, null, 2));
+    }
+
+
+
+  </script>
+</body>
+</html>
