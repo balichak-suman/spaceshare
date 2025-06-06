@@ -175,7 +175,7 @@
     .metamask-icon {
       position: absolute;
       top: 1.5rem;
-      right: 6rem; /* Adjusted position to fix overlap */
+      right: 10.5rem; /* Adjusted position to fix overlap */
       z-index: 3;
       width: 38px;
       height: 38px;
@@ -390,12 +390,12 @@
       <source src="static/final.mp4" type="video/mp4">
       <!-- Use your new video file for the final page -->
     </video>
-    <div style="position: absolute; top: 1.5rem; right: 2rem; display: flex; gap: 0.5rem; z-index: 3;">
-      <span id="joinText" style="color: #6366f1; font-weight: 700; font-size: 1.1rem; cursor: pointer; align-self: center; margin-right: 0.7rem; text-decoration: underline;" onclick="window.open('https://github.com/balichak-suman/spaceshare', '_blank')">Join</span>
+    <div style="position: absolute; top: 1.5rem; right: 2rem; display: flex; align-items: center; gap: 1.2rem; z-index: 3;">
+      <span id="joinText" style="color: #6366f1; font-weight: 700; font-size: 1.1rem; cursor: pointer; text-decoration: underline; white-space: nowrap;" onclick="window.open('https://github.com/balichak-suman/spaceshare', '_blank')">Join</span>
       <button id="logoutBtn" style="background: #e11d48; padding: 0.35rem 0.75rem; border-radius: 4px; font-size: 0.5rem; font-weight: 600; cursor: pointer;" onclick="logout()">Logout</button>
       <button id="connectBtn" style="background: linear-gradient(90deg, #ff6a00 0%, #ff0000 100%); color: #fff; border: none; border-radius: 8px; padding: 0.35rem 0.75rem; font-size: 0.6rem; font-weight: 600; cursor: pointer;" onclick="connectMetaMask()">Connect MetaMask</button>
     </div>
-    <button id="metamaskIcon" class="metamask-icon" style="display:none;" tabindex="-1">
+    <button id="metamaskIcon" class="metamask-icon" style="display:none; right: 10.5rem;" tabindex="-1">
       <img src="static/metamask-fox.png" alt="MetaMask" />
     </button>
     <div id="userAddress" class="connect-address"></div>
@@ -718,6 +718,10 @@
     }
 
     function downloadFile(fileId, filename) {
+      if (!window.ethereum || !window.ethereum.selectedAddress) {
+        showTemporaryMessage('Please connect your MetaMask wallet to download files.', 3000, '#e11d48');
+        return;
+      }
       const username = localStorage.getItem('lastUsername');
       if (!username) {
         showTemporaryMessage('Username not found. Please log in again.', 3000, '#e11d48');
@@ -772,10 +776,9 @@
         video.ontimeupdate = null;
         video.currentTime = 4;
         video.loop = false;
-        video.playbackRate = 3.0;
+        video.playbackRate = 1.0;
         video.play();
-        // Wait until 7 seconds, then show wallet page
-        const handler = function() {
+        video.ontimeupdate = function() {
           if (video.currentTime >= 7) {
             video.pause();
             video.onended = null;
@@ -783,7 +786,6 @@
             showWalletUpload();
           }
         };
-        video.ontimeupdate = handler;
         video.onended = null;
       } else {
         showWalletUpload();

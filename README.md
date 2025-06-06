@@ -95,5 +95,34 @@ flask run
 
 ---
 
+## Port Forwarding (Ngrok)
+
+To make your local Flask backend accessible over the internet, we use [ngrok](https://ngrok.com/):
+
+### Setup
+1. Install ngrok (see below or https://ngrok.com/download).
+2. Start your backend as usual (the script will now also start ngrok automatically).
+3. Ngrok will provide a public URL to access your Flask backend from anywhere.
+
+### How to install ngrok
+- On macOS (recommended):
+  ```sh
+  brew install --cask ngrok
+  ```
+- Or download from https://ngrok.com/download and follow their instructions.
+
+### How to use (automated)
+- The `start-dev.sh` script now opens a new terminal and runs:
+  ```sh
+  ngrok http 5001
+  ```
+- Copy the public forwarding URL from the ngrok terminal and use it to access your backend remotely.
+
+### Notes
+- You may need to sign up for a free ngrok account and run `ngrok config add-authtoken <your_token>` once.
+- Only the Flask backend is exposed; the blockchain node remains local for security.
+
+---
+
 **You are done!**  
 Your file will be uploaded and logged on the blockchain.

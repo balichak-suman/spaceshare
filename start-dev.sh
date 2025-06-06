@@ -6,6 +6,7 @@ BACKEND_DIR="/Users/balichaksuman/Downloads/plz/SpaceShare/backend"
 VENV_PATH="$BACKEND_DIR/venv/bin/activate"
 BLOCKCHAIN_VENV_PATH="$BLOCKCHAIN_DIR/venv/bin/activate"
 BACKEND_VENV_PATH="$BACKEND_DIR/venv/bin/activate"
+NGROK_PATH=$(which ngrok)
 
 osascript <<EOF
 tell application "Terminal"
@@ -28,5 +29,7 @@ tell application "Terminal"
     do script "cd '$BACKEND_DIR'; source '$BACKEND_VENV_PATH'; python3 -m pip install --break-system-packages -r requirements.txt; python3 app.py"
     delay 5
     do script "cd '$BLOCKCHAIN_DIR'; source '$BLOCKCHAIN_VENV_PATH'; npx hardhat run scripts/deploy.js --network localhost"
+    delay 2
+    do script "$NGROK_PATH start --all"
 end tell
 EOF
